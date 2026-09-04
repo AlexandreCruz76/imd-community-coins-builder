@@ -1,0 +1,28 @@
+{
+  "name": "imd-community-coins",
+  "version": "1.0.0",
+  "description": "IMD Community Coins Builder - Plataforma de lançamento de tokens",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../contracts && npm install",
+    "dev": "concurrently \"cd frontend && npm run dev\" \"cd contracts && npx hardhat node\"",
+    "build": "cd frontend && npm run build",
+    "test": "cd contracts && npm test",
+    "lint": "cd frontend && npm run lint",
+    "clean": "cd frontend && rm -rf node_modules .next && cd ../contracts && rm -rf node_modules artifacts cache",
+    "deploy": "cd contracts && npm run deploy"
+  },
+  "keywords": [
+    "imd",
+    "community-coins",
+    "tokens",
+    "uniswap-v4",
+    "bonding-curve",
+    "defi"
+  ],
+  "author": "IMD Community",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

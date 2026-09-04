@@ -1,0 +1,242 @@
+IMD Community Coins documentação completa
+
+Aqui está a documentação completa do protocolo IMD Community Coins, transcrita e organizada de forma didática, com base na página oficial .
+
+Visão geral
+Todo token lançado aqui é precificado em um único ativo: IMD. Não é em ETH e não é contra uma pool de liquidez própria. Você negocia com ETH, mas, por baixo, cada moeda fica sobre uma curva de bonding denominada em IMD. Assim, comprar qualquer moeda compra IMD, e todo o volume do launchpad passa por uma única pool ETH/IMD .
+
+A curva
+Cada moeda nasce com oferta fixa de 1 bilhão e uma relação de produto constante:
+
+k
+=
+virtualImd
+×
+virtualCoin
+k=virtualImd×virtualCoin
+Comprar retira moeda da curva e traz IMD para dentro, então o preço sobe ao longo de um caminho fixo e publicado (o gráfico que aparece na página de cada moeda). Não há livro de ordens nem provedor de liquidez tradicional; o preço é função apenas de quanto já foi vendido/comprado .
+
+O IMD pago na compra vira o backing da moeda. As vendas são pagas a partir dessa reserva, e a aritmética garante que o backing sempre cubra toda a moeda em circulação:
+
+backing
+=
+virtualImd
+−
+launch virtualImd
+backing=virtualImd−launch virtualImd
+exatamente, a todo momento .
+
+O hook
+Cada moeda recebe uma pool Uniswap v4 pareada com ETH nativo, com um hook acoplado, e essa pool não tem liquidez própria. Ela existe para que wallets, roteadores e exploradores enxerguem um par ETH/moeda comum. Quando um swap chega, o beforeSwap do hook consome a operação inteira e o AMM central não faz nada .
+
+Como ambas as pernas da operação se liquidam dentro de um único unlock, o ETH que você paga e a moeda que você recebe se compensam em uma única transação. Se a pool ETH/IMD não conseguir fechar a sua parte, os saldos não se compensam e toda a operação reverte; ela nunca termina “pela metade” .
+
+ERC-6909
+O PoolManager da Uniswap v4 guarda todos os tokens e controla quem possui o quê usando claims ERC-6909. O hook usa esses claims como sua contabilidade: o supply inteiro de uma moeda é depositado uma vez no lançamento e depois não se move mais até alguém comprar .
+
+É isso que torna o roteamento barato. Creditar IMD à curva, liberar moeda do inventário e cobrar a taxa do criador são apenas entradas contábeis, não transferências on-chain completas .
+
+Taxas
+O protocolo define três fluxos de receita:
+
+1% para os provedores de liquidez da pool ETH/IMD, além da taxa de protocolo da Uniswap.
+
+0,5% da perna ETH para quem lançou a moeda, pago em cada trade.
+
+0,5% da perna IMD é queimado, então o volume do launchpad reduz permanentemente a oferta de IMD .
+
+“Nenhum desses é oficial”
+Todo token aqui é lançado por quem chamou launch() — qualquer pessoa, permissionless, pagando apenas o gas. Nome e símbolo são texto livre escolhido por essa pessoa. Nada impede que uma moeda se chame “IMD” ou copie o nome de outra já existente, e o launchpad não revisa, endossa nem audita nenhum deles .
+
+A única identidade confiável de uma moeda é o endereço do contrato. O token IMD em si é:
+
+0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7
+
+e não é lançado aqui; ele é o token no qual todas as moedas da página são precificadas .
+
+O que observar
+As moedas se movem juntas. Comprar qualquer moeda compra IMD pela pool compartilhada, o que valoriza IMD frente ao ETH — e, como todas as curvas são precificadas em IMD, isso eleva o preço em ETH de todas as outras moedas, inclusive as que ninguém tocou. Uma moeda indo bem puxa todo o board para cima. Essa é a razão de precificar tudo em um único token, em vez de cada moeda contra sua própria pool ETH .
+
+O mesmo caminho funciona ao contrário. Vender qualquer moeda vende IMD para essa mesma pool e derruba todas as outras de uma vez, então uma venda generalizada se amplifica em vez de ficar contida. Essas não são apostas independentes: ter duas moedas aqui é, na prática, ter uma única posição duplicada .
+
+A saída de toda moeda também passa por essa pool, então a profundidade em ETH dela é o teto do que todos os holders juntos conseguem sacar. O backing mostrado na página de cada moeda é o número honesto: é dele que as saídas são realmente pagas, e ele costuma ser bem menor que o market cap anunciado .
+
+Contratos
+A documentação recomenda ler os endereços a partir do registro de deploy e do burn executor ao vivo no hook, em vez de confiar em textos estáticos, para evitar divergências. Todos são verificados no Etherscan .
+
+Endereços listados:
+
+0x51768F5dA32BA2008304cC81674da51aCb802888
+curvas, reservas, taxas — todo o trade passa por aqui .
+
+0x73d1ae084F04f793A5bbd6B623d74400C9Fc3f42
+onde vive launch(); qualquer um pode chamar .
+
+0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7
+o token no qual todas as moedas são precificadas — não é lançado aqui .
+
+0xe29386719C155B6847aD5a4E97C6674f10ffc750
+para onde vai a taxa de 0,5% de IMD queimada .
+
+0x000000000004444c5dc75cB358380D2e3dE08A90
+PoolManager: guarda todos os tokens e claims ERC-6909 .
+
+1% fee · tick spacing 200
+a única pool por onde todo o volume do launchpad é roteado .
+
+Resumo técnico final da docs:
+Bonding curves priced in IMD · Uniswap v4 hook
+Hook: 0x51768F5dA32BA2008304cC81674da51aCb802888 .
+
+Se quiser, no próximo passo eu transformo isso em um guia de lançamento passo a passo (do ponto de vista de quem vai criar a moeda) ou em um resumo executivo para apresentar a parceiros/investidores.
+
+Passo a passo de quem vai lançar moeda e crie os agentes relacionados com esse desenvolvimento e seus repsectivos prompts e fontes de aplicação para inciarmos o builder
+Aqui está um passo a passo completo para quem vai lançar uma moeda no protocolo IMD, já estruturado em agentes, prompts e fontes de aplicação, para você iniciar o builder de forma organizada.
+
+Passo a passo de lançamento (visão do criador)
+Definir conceito e narrativa. Escolher nome, símbolo, tese de valor e utilidade social.
+
+Preparar identidade visual. Logo, banner, cores e textos curtos para X/Telegram.
+
+Estruturar tokenomics. Definir distribuição inicial, reservas e estratégia de marketing.
+
+Preparar infraestrutura. Criar wallet, configurar rede, validar endereços do protocolo.
+
+Executar launch. Chamar launch() no contrato correto, pagando gas.
+
+Comunicar lançamento. Anunciar em redes sociais, comunidades e canais parceiros.
+
+Gerenciar pós-lançamento. Manter volume, engajamento e utilidade para a moeda.
+
+Agentes do builder
+Abaixo estão os agentes necessários, com seus prompts e fontes de aplicação.
+
+Agente 1: Estrategista de Lançamento
+Função: Definir conceito, narrativa e tokenomics.
+
+Prompt:
+
+text
+Você é um estrategista de launch de tokens. Sua tarefa é criar:
+- Nome e símbolo curtos e memoráveis
+- Tese de valor em 1 frase
+- Utilidade prática (acesso, votação, perks, drops)
+- Distribuição inicial (comunidade, tesouraria, time, marketing, reservas)
+- Estratégia de lançamento em 7 dias
+
+Use como referência o protocolo IMD Community Coins, onde:
+- Tokens são precificados em IMD via bonding curve
+- Oferta fixa de 1B tokens
+- Fee de 0,5% para o launcher em cada trade
+- Pool ETH/IMD compartilhada
+
+Entregue um plano claro e executável.
+Fonte de aplicação: Documentação IMD .
+
+Agente 2: Designer de Identidade
+Função: Criar identidade visual e assets.
+
+Prompt:
+
+text
+Você é um designer de identidade para tokens. Sua tarefa é criar:
+- Logo (descrição textual ou SVG)
+- Paleta de cores (3-5 cores)
+- Banner para X/Telegram
+- Ícones e elementos visuais
+
+O estilo deve ser: [meme/serious/premium/gamer]
+O token se chama: [NOME]
+Símbolo: [SYM]
+
+Entregue descrições claras que possam ser implementadas por ferramentas de design.
+Fonte de aplicação: Referências visuais de tokens virais.
+
+Agente 3: Desenvolvedor de Contrato
+Função: Preparar e validar contrato do token.
+
+Prompt:
+
+text
+Você é um desenvolvedor Solidity especializado em Uniswap v4 e hooks.
+Sua tarefa é:
+- Criar contrato ERC-20 com supply fixo de 1B
+- Implementar metadata (nome, símbolo, website, social)
+- Validar integração com o launchpad IMD
+- Garantir compatibilidade com ERC-6909 e PoolManager
+
+Use como referência:
+- Contrato de launch: 0x73d1ae084F04f793A5bbd6B623d74400C9Fc3f42
+- Hook: 0x51768F5dA32BA2008304cC81674da51aCb802888
+- IMD token: 0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7
+
+Entregue código pronto para deploy e checklist de validação.
+Fonte de aplicação: Documentação IMD e contratos verificados .
+
+Agente 4: Operador de Launch
+Função: Executar o lançamento na chain.
+
+Prompt:
+
+text
+Você é um operador de launch de tokens. Sua tarefa é:
+- Configurar wallet com ETH para gas
+- Validar endereços dos contratos do protocolo
+- Executar chamada para launch() com parâmetros corretos
+- Verificar transação no explorer
+- Documentar hash do launch e endereço do token
+
+Use como referência:
+- Contrato de launch: 0x73d1ae084F04f793A5bbd6B623d74400C9Fc3f42
+- Rede e explorer apropriados
+
+Entregue relatório de execução com hash, status e próximos passos.
+Fonte de aplicação: Documentação IMD .
+
+Agente 5: Gestor de Comunidade
+Função: Construir e engajar comunidade pós-lançamento.
+
+Prompt:
+
+text
+Você é um gestor de comunidade para tokens. Sua tarefa é:
+- Criar calendário de conteúdo para 7 dias
+- Escrever posts para X/Telegram
+- Planejar giveaways e campanhas
+- Definir métricas de engajamento (holders, volume, retenção)
+
+Use como referência:
+- Tokenomics definido pelo Estrategista
+- Identidade visual criada pelo Designer
+- Fee de 0,5% para o launcher
+
+Entregue plano executável com textos prontos e cronograma.
+Fonte de aplicação: Melhores práticas de community building.
+
+Agente 6: Analista de Mercado
+Função: Monitorar performance e ajustar estratégia.
+
+Prompt:
+
+text
+Você é um analista de mercado para tokens. Sua tarefa é:
+- Monitorar volume, holders e preço
+- Analisar impacto da pool ETH/IMD compartilhada
+- Identificar oportunidades de crescimento
+- Alertar sobre riscos de venda generalizada
+
+Use como referência:
+- Documentação IMD sobre curva e backing
+- Dados on-chain do token lançado
+
+Entregue relatório semanal com métricas e recomendações.
+Fonte de aplicação: Documentação IMD e dados on-chain .
+
+Fontes de aplicação
+Documentação IMD: https://communitycoins.imd.fun/docs
+
+Contratos verificados: Etherscan (endereços listados na docs)
+
+Uniswap v4 docs: https://developers.uniswap.org/docs
+
+ERC-6909: https://developers.uniswap.org/docs/protocols/v4/concepts/erc-6909
