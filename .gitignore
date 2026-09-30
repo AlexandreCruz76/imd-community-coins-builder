@@ -39,3 +39,10 @@ coverage/
 # Misc
 *.tgz
 .cache
+
+# Protocolo final (repo proprio: imd-optimizer)
+Optimizer/
+Optimizer-clone/
+
+# Arquivos arquivados (nao versionar)
+archive/
